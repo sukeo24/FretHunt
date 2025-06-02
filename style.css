@@ -1,67 +1,62 @@
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #030E26; /* ロゴ背景に合わせた深いネイビー */
-  color: #e2e8f0;
-  text-align: center;
+/* 全体設定 */
+html, body {
   margin: 0;
-  padding: 20px;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Segoe UI', sans-serif;
+  background: #030E26;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
 }
 
+/* ロゴ */
 .logo {
-  width: 300px;
-  margin-bottom: 10px;
+  width: 280px;
+  margin: 10px auto 0;
 }
 
-h2 {
-  color: #3b82f6;
-  font-size: 36px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  letter-spacing: 2px;
-  text-shadow: 1px 1px 2px #00000044;
-}
-
-canvas {
-  background: #1e293b;  /* Neo Blueに馴染む */
-  border-radius: 10px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-  max-width: 1200px;
-  width: 100%;
-  height: auto;
-  display: block;
-  margin: 0 auto 24px;
-}
-
+/* 操作パネル */
 .controls {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 14px;
   flex-wrap: wrap;
+  font-size: 14px;
+  margin: 10px 0;
 }
 
-.controls label {
-  font-size: 15px;
+/* フレットボード */
+canvas {
+  background: #1e293b;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  flex-shrink: 1;
+  width: 100vw;
+  max-height: 65vh;
+  height: auto;
+  margin: 0 auto;
+  display: block;
 }
 
-/* 共通レイアウト用 */
+/* 音名ボタン共通 */
 .note-buttons {
+  display: flex;
   justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
-/* 音名ボタン専用（表示制御される対象） */
 #noteButtons {
-  display: none;  /* JavaScriptで toggle される */
+  display: none;  /* JSで切り替え */
 }
-
 
 .note-buttons button {
-  padding: 12px 16px;
-  margin: 5px;
-  font-size: 18px;
+  padding: 10px 14px;
+  font-size: 16px;
   border-radius: 6px;
   border: 1px solid #3b82f6;
   background-color: #1e293b;
@@ -75,6 +70,7 @@ canvas {
   color: white;
 }
 
+/* 結果表示と次ボタン */
 #result {
   font-size: 16px;
   font-weight: bold;
@@ -96,28 +92,26 @@ button[onclick="newQuestion()"]:hover {
   background-color: #2563eb;
 }
 
+/* スマホ対応 */
 @media (max-width: 768px) {
   .controls {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .note-buttons {
     flex-direction: row;
     flex-wrap: wrap;
-  }
-
-  canvas {
-    width: 100% !important;
-    height: auto !important;
+    font-size: 12px;
+    gap: 8px;
   }
 
   .logo {
-    width: 80%;
+    width: 70%;
   }
 
-  button {
+  .note-buttons button,
+  button[onclick="newQuestion()"] {
     font-size: 14px;
-    padding: 6px 12px;
+    padding: 6px 10px;
+  }
+
+  canvas {
+    max-height: 60vh;
   }
 }
