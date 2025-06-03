@@ -25,7 +25,6 @@ canvas {
   background: #1e293b;  /* Neo Blueに馴染む */
   border-radius: 10px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-  max-width: 1200px;
   width: 100%;
   height: auto;
   display: block;
@@ -41,7 +40,7 @@ canvas {
 }
 
 .controls label {
-  font-size: 15px;
+  font-size: 17px;
 }
 
 /* 共通レイアウト用 */
@@ -59,30 +58,30 @@ canvas {
 
 
 .note-buttons button {
-  padding: 12px 16px;
+  padding: 15px 20px;
   margin: 5px;
-  font-size: 18px;
+  font-size: 22px;
   border-radius: 6px;
-  border: 1px solid #3b82f6;
+  border: 1px solid #00ccff;
   background-color: #1e293b;
-  color: #e2e8f0;
+  color: #00ccff;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .note-buttons button:hover {
-  background-color: #3b82f6;
-  color: white;
+  background-color: #00ccff;
+  color: #1e293b;
 }
 
 #result {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
   margin: 10px;
 }
 
 button[onclick="newQuestion()"] {
-  font-size: 16px;
+  font-size: 18px;
   padding: 8px 20px;
   border: none;
   border-radius: 6px;
@@ -120,4 +119,3 @@ button[onclick="newQuestion()"]:hover {
     font-size: 14px;
     padding: 6px 12px;
   }
-}
