@@ -3,8 +3,8 @@ const canvas = document.getElementById('fretboard');
 const ctx = canvas.getContext('2d');
 
 const dpr = window.devicePixelRatio || 1;
-const cssWidth = 1200;
-const cssHeight = 320;
+const cssWidth = 1400;
+const cssHeight = 330;
 canvas.width = cssWidth * dpr;
 canvas.height = cssHeight * dpr;
 canvas.style.width = cssWidth + 'px';
@@ -18,7 +18,7 @@ const fretCount = 25;
 const questionFretLimit = 13;
 const stringCount = 6;
 const stringSpacing = cssHeight / (stringCount + 1);
-const startX = 100;
+const startX = cssWidth * 0.06;
 const startY = stringSpacing;
 let fretX = [], fretCenters = [], stringCenters = [], hitboxes = [];
 let question = {};
@@ -28,7 +28,10 @@ function drawFretboard() {
   ctx.lineWidth = 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   fretX = [startX];
-  let fw = 70, scale = 0.9439;
+
+  let fw = (cssWidth - startX * 2) / fretCount * 1.75;
+  let scale = 0.9439;
+
   for (let i = 0; i < fretCount; i++) {
     fretX.push(fretX[i] + fw);
     fw *= scale;
@@ -79,12 +82,31 @@ function drawFretboard() {
   ctx.fillStyle = '#fffaf0';
   ctx.fill();
 
+  // ① 横グラデーション
+  const gradX = ctx.createLinearGradient(startX, 0, maxX, 0);
+  gradX.addColorStop(0, '#3f3222');
+  gradX.addColorStop(1, '#252019');
+
+  // 一旦描画
+  ctx.fillStyle = gradX;
+  ctx.fillRect(startX, startY, maxX - startX, stringSpacing * (stringCount - 1));
+
+  // ② 縦グラデーション（上から透明黒、下に透明白 など）
+  const gradY = ctx.createLinearGradient(0, startY, 0, startY + stringSpacing * (stringCount - 1));
+  gradY.addColorStop(0, '#3f3222');  // 上に少し影
+  gradY.addColorStop(1, '#252019');  // 下に光
+
+  ctx.fillStyle = gradY;
+  ctx.fillRect(startX, startY, maxX - startX, stringSpacing * (stringCount - 1));
+
   // 🎸 指板描画
-  ctx.fillStyle = '#3c3225';
+  ctx.fillStyle = gradY;
+  gradY.addColorStop(0, '#3f3222');  // 上に少し影
+  gradY.addColorStop(1, '#252019');
   const arcRadius = stringSpacing * (stringCount - 1) / 2;
   const arcX = maxX;
   const arcY = startY + arcRadius;
-  const controlX = arcX + arcRadius * 0.6;
+  const controlX = arcX + arcRadius * 0.3;
   ctx.beginPath();
   ctx.moveTo(arcX, startY);
   ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing);
@@ -129,7 +151,9 @@ function drawFretboard() {
   ctx.shadowBlur = 6;
   ctx.shadowOffsetX = 20;
   ctx.shadowOffsetY = 8;
-  ctx.fillStyle = '#3c3225';
+  ctx.fillStyle = gradY;
+  gradY.addColorStop(0, '#3f3222');  // 上に少し影
+  gradY.addColorStop(1, '#252019');
   ctx.beginPath();
   ctx.moveTo(arcX, startY);
   ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing);
@@ -139,21 +163,16 @@ function drawFretboard() {
   ctx.fill();
   ctx.restore();
 
-  // 指板グラデーション塗り
-  const gradient = ctx.createLinearGradient(startX, 0, maxX, 0);
-  gradient.addColorStop(0, '#3f3222');
-  gradient.addColorStop(1, '#3c3225');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(startX, startY, maxX - startX, stringSpacing * (stringCount - 1));
-
   // フレット線描画
   for (let i = 0; i < fretX.length; i++) {
     if (i === fretX.length - 1) continue;
     ctx.beginPath();
-    ctx.lineWidth = 2.8;
+    ctx.lineWidth = 3.3;
     ctx.moveTo(fretX[i], startY);
     ctx.lineTo(fretX[i], startY + (stringCount - 1) * stringSpacing);
-    ctx.strokeStyle = '#fafdff';
+    ctx.strokeStyle = gradY;
+    gradY.addColorStop(0.02, '#fafdff');  // 上に少し影
+    gradY.addColorStop(0.98, '#ccced0');
     ctx.stroke();
   }
 
@@ -161,7 +180,8 @@ function drawFretboard() {
   ctx.beginPath();
   ctx.moveTo(fretX[0] - 2, startY);
   ctx.lineTo(fretX[0] - 2, startY + (stringCount - 1) * stringSpacing);
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#fffaf0';
   ctx.stroke();
 
   // 弦描画
@@ -171,7 +191,7 @@ function drawFretboard() {
     ctx.moveTo(startX, y);
     ctx.lineTo(canvas.width, y);
     ctx.lineWidth = 2.5 - ((stringCount - 1 - i) * 0.4);
-    ctx.strokeStyle = '#a3a3a3';
+    ctx.strokeStyle = '#c0c0c0';
     ctx.stroke();
     ctx.fillStyle = 'white';
     ctx.fillText(`${i + 1}弦`, startX - 50, y);
@@ -201,11 +221,11 @@ function drawFretboard() {
         const y = stringCenters[s];
 
         ctx.beginPath();
-        ctx.arc(x, y, 10, 0, 2 * Math.PI);
+        ctx.arc(x, y, 12, 0, 2 * Math.PI);
         ctx.fillStyle = note === highlightedNote ? 'lightgreen' : 'rgba(0, 0, 0, 0.4)';
         ctx.fill();
 
-        ctx.font = 'bold 13px sans-serif';
+        ctx.font = 'bold 15px sans-serif';
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 3;
         ctx.textAlign = 'center';
@@ -292,11 +312,11 @@ function drawAnswerCircle(string, fret, color = 'lightgreen', radius = 6) {
   const note = getNote(string, fret);
 
   ctx.beginPath();
-  ctx.arc(x, y, 10, 0, 2 * Math.PI);
+  ctx.arc(x, y, 12, 0, 2 * Math.PI);
   ctx.fillStyle = color;
   ctx.fill();
 
-  ctx.font = 'bold 13px sans-serif';
+  ctx.font = 'bold 15px sans-serif';
   ctx.strokeStyle = 'black';
   ctx.lineWidth = 3;
   ctx.textAlign = 'center';
