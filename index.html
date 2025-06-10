@@ -7,6 +7,27 @@
 </head>
 <body>
   <header>
+
+    <div id="settings">
+
+      <label for="fingerboardSelect">指板材質:</label>
+      <select id="fingerboardSelect">
+        <option value="rosewood" selected>ローズウッド</option>
+        <option value="maple">メープル</option>
+        <option value="ebony">エボニー</option>
+      </select>
+
+
+      <label for="inlaySelect">インレイ：</label>
+      <select id="inlaySelect">
+        <option value="dot">ドット</option>
+        <option value="block">ブロック</option>
+        <option value="dish">ディッシュ</option>
+        <option value="diamond">ダイヤモンド</option>
+      </select>
+    </div>
+    
+
     <img src="FretHunt_logo.png" alt="FretHunt ロゴ" class="logo" />
   </header>
 
@@ -19,16 +40,16 @@
     <label><input type="checkbox" id="includeSharps"  /> ♯(黒鍵)を含める</label>
   </div>
 
-  
-  <canvas id="fretboard" width="1600" height="300"></canvas>
+
+  <canvas id="fretboard" width="1600" height="300" style="position:relative; z-index:1;"></canvas>
+
 
   <!-- 音名ボタン -->
-  <div id="noteButtons" class="note-buttons">
-    <div id="buttons"></div> <!-- ←ここに移動！ -->
-  </div>
+  <div id="buttons" class="note-buttons"></div> 
+
+  <script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
 
   <p id="question">問題: </p>
-  <div class="note-buttons" id="buttons"></div>
   <p id="result"></p>
   <button onclick="newQuestion()">次の問題へ</button>
 
