@@ -24,6 +24,130 @@ let fretX = [], fretCenters = [], stringCenters = [], hitboxes = [];
 let question = {};
 let highlightedNote = null;
 
+function getNoteWithOctave(string, fret) {
+  const openNotesWithOctave = [
+    { note: "E", octave: 4 }, // 1弦
+    { note: "B", octave: 3 },
+    { note: "G", octave: 3 },
+    { note: "D", octave: 3 },
+    { note: "A", octave: 2 },
+    { note: "E", octave: 2 }  // 6弦
+  ];
+
+  const open = openNotesWithOctave[string];
+  const noteIndex = NOTE_NAMES_ALL.indexOf(open.note);
+  const totalIndex = noteIndex + fret;
+
+  const note = NOTE_NAMES_ALL[totalIndex % 12];
+  const octave = open.octave + Math.floor((noteIndex + fret) / 12);
+
+  return `${note}${octave}`;  // 例: "G3"
+}
+
+function getFingerboardColors() {
+  const type = document.getElementById('fingerboardSelect')?.value || 'rosewood';
+
+  switch (type) {
+    case 'maple':
+      return {
+        gradX: ['#ffe3a1', '#d89f3f'],
+        gradY: ['#ffe3a1', '#efc878']
+      };
+    case 'ebony':
+      return {
+        gradX: ['#0e0e0e', '#1a1a1a'],  // より黒くて引き締まった印象に
+        gradY: ['#1c1c1c', '#101010']
+      };      
+    case 'rosewood':
+    default:
+      return {
+        gradX: ['#3f3222', '#252019'],
+        gradY: ['#3f3222', '#252019']
+      };
+  }
+}
+
+function drawRosewoodGrain(ctx, startX, startY, width, height) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(120, 50, 50, 0.2)'; // 赤系
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 100; i++) {
+    const y = startY + Math.random() * height;
+    const wobble = Math.sin(i * 0.3) * 5;
+    ctx.beginPath();
+    ctx.moveTo(startX, y);
+    ctx.lineTo(startX + width, y + wobble);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+
+function drawPositionMarkers(style = 'dot') {
+  const inlayFrets = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+  const doubleFrets = [12, 24];
+
+  inlayFrets.forEach(f => {
+    const x = fretCenters[f];
+    const ySet = doubleFrets.includes(f) ? [1.5, 3.5] : [2.5];
+
+    ySet.forEach(offset => {
+      const y = startY + offset * stringSpacing;
+
+      switch (style) {
+        case 'dot':
+          drawDot(x, y, 'white', 8);
+          break;
+
+        case 'block':
+          drawBlock(x, y, 'white', 20, 100);
+          break;
+
+        case 'dish':
+          drawDot(x, y, 'white', 9);
+          break;
+
+        case 'diamond':
+          drawDiamond(x, y);
+          break;
+
+        default:
+          drawDot(x, y, 'white', 5);
+      }
+    });
+  });
+}
+
+// フレット線用のグラデーションを個別に定義
+const fretGradient = ctx.createLinearGradient(0, startY, 0, startY + stringSpacing * (stringCount - 1));
+fretGradient.addColorStop(0.02, '#fafdff');  // 上に少し影
+fretGradient.addColorStop(0.98, '#ccced0');
+
+
+// 補助関数（バード以外）
+function drawBlock(x, y, color, width, height) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x - width / 2, y - height / 2, width, height);
+}
+
+function drawDiamond(x, y, size = 7) {
+
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+  gradient.addColorStop(0, '#a8f0d4');   // 中心：淡いエメラルドグリーン
+  gradient.addColorStop(0.5, '#cceeff'); // 中間：淡い水色
+  gradient.addColorStop(1, '#007a5e');   // 外側：深い緑系（高級感）
+  
+  ctx.beginPath();
+  ctx.moveTo(x, y - size);
+  ctx.lineTo(x + size, y);
+  ctx.lineTo(x, y + size);
+  ctx.lineTo(x - size, y);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+}
+
+
 function drawFretboard() {
   ctx.lineWidth = 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -70,7 +194,21 @@ function drawFretboard() {
     }
   }
 
+  // 🎨 選択された指板の色を取得
+  const { gradX: [gx1, gx2], gradY: [gy1, gy2] } = getFingerboardColors();
+
   const maxX = fretX[fretX.length - 1];
+
+  // 横グラデーション（木目風）
+  const gradX = ctx.createLinearGradient(startX, 0, maxX, 0);
+  gradX.addColorStop(0, gx1);
+  gradX.addColorStop(1, gx2);
+
+  // 縦グラデーション（影の立体感）
+  const gradY = ctx.createLinearGradient(0, startY, 0, startY + stringSpacing * (stringCount - 1));
+  gradY.addColorStop(0, gy1);
+  gradY.addColorStop(1, gy2);
+
 
   // 🎸 ピックガード描画（キャンバスいっぱいまで）
   ctx.beginPath();
@@ -82,27 +220,15 @@ function drawFretboard() {
   ctx.fillStyle = '#fffaf0';
   ctx.fill();
 
-  // ① 横グラデーション
-  const gradX = ctx.createLinearGradient(startX, 0, maxX, 0);
-  gradX.addColorStop(0, '#3f3222');
-  gradX.addColorStop(1, '#252019');
-
   // 一旦描画
   ctx.fillStyle = gradX;
   ctx.fillRect(startX, startY, maxX - startX, stringSpacing * (stringCount - 1));
-
-  // ② 縦グラデーション（上から透明黒、下に透明白 など）
-  const gradY = ctx.createLinearGradient(0, startY, 0, startY + stringSpacing * (stringCount - 1));
-  gradY.addColorStop(0, '#3f3222');  // 上に少し影
-  gradY.addColorStop(1, '#252019');  // 下に光
 
   ctx.fillStyle = gradY;
   ctx.fillRect(startX, startY, maxX - startX, stringSpacing * (stringCount - 1));
 
   // 🎸 指板描画
   ctx.fillStyle = gradY;
-  gradY.addColorStop(0, '#3f3222');  // 上に少し影
-  gradY.addColorStop(1, '#252019');
   const arcRadius = stringSpacing * (stringCount - 1) / 2;
   const arcX = maxX;
   const arcY = startY + arcRadius;
@@ -149,19 +275,42 @@ function drawFretboard() {
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.25)';
   ctx.shadowBlur = 6;
-  ctx.shadowOffsetX = 20;
-  ctx.shadowOffsetY = 8;
+  ctx.shadowOffsetX = 12;
+  ctx.shadowOffsetY = 3;
   ctx.fillStyle = gradY;
-  gradY.addColorStop(0, '#3f3222');  // 上に少し影
-  gradY.addColorStop(1, '#252019');
   ctx.beginPath();
   ctx.moveTo(arcX, startY);
   ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing);
-  ctx.lineTo(arcX - 1, startY + (stringCount - 1) * stringSpacing);
-  ctx.lineTo(arcX - 1, startY);
+  ctx.lineTo(arcX - 15, startY + (stringCount - 1) * stringSpacing);
+  ctx.lineTo(arcX - 15, startY);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
+
+
+  if (document.getElementById('fingerboardSelect')?.value === 'rosewood') {
+    // 指板の描画範囲を定義
+    ctx.save();
+  
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(arcX, startY);
+    ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing);
+    ctx.lineTo(startX, startY + (stringCount - 1) * stringSpacing);
+    ctx.closePath();
+  
+    // このパスの内側だけ描画できるようにする
+    ctx.clip();
+  
+    // 木目を描く（clip内に限定される）
+    drawRosewoodGrain(ctx, startX, startY, maxX - startX + 30, stringSpacing * (stringCount - 1));
+  
+    ctx.restore(); // clip解除
+  }
+
+  // ポジションマーク描画
+  const inlayStyle = document.getElementById('inlaySelect')?.value || 'dot';
+  drawPositionMarkers(inlayStyle);
 
   // フレット線描画
   for (let i = 0; i < fretX.length; i++) {
@@ -170,9 +319,7 @@ function drawFretboard() {
     ctx.lineWidth = 3.3;
     ctx.moveTo(fretX[i], startY);
     ctx.lineTo(fretX[i], startY + (stringCount - 1) * stringSpacing);
-    ctx.strokeStyle = gradY;
-    gradY.addColorStop(0.02, '#fafdff');  // 上に少し影
-    gradY.addColorStop(0.98, '#ccced0');
+    ctx.strokeStyle = fretGradient;
     ctx.stroke();
   }
 
@@ -196,17 +343,6 @@ function drawFretboard() {
     ctx.fillStyle = 'white';
     ctx.fillText(`${i + 1}弦`, startX - 50, y);
   }
-
-  // ポジションマーク描画
-  [3, 5, 7, 9, 12, 15, 17, 19, 21, 24].forEach(f => {
-    if (f < fretCount) {
-      const x = fretCenters[f];
-      const ySet = (f === 12 || f === 24) ? [1.5, 3.5] : [2.5];
-      ySet.forEach(offset => {
-        drawDot(x, startY + offset * stringSpacing, 'white', 5);
-      });
-    }
-  });
 
   // 音名表示（学習モード）
   const mode = document.querySelector('input[name="mode"]:checked')?.value;
@@ -236,26 +372,30 @@ function drawFretboard() {
       }
     }
   }
+  if (
+    question?.string !== undefined &&
+    question?.fret !== undefined &&
+    document.querySelector('input[name="mode"]:checked')?.value !== 'learn'  // ← 追加
+  ) {
+    drawNoteCircle(question.string, question.fret);  // 赤丸を再描画
+  }  
 }
-
 
 window.highlightNote = function(note) {
   highlightedNote = note;
   drawFretboard();
 };
 
-
 function updateNoteButtonsVisibility() {
-  const noteButtonsDiv = document.getElementById("noteButtons");
   const nextBtn = document.querySelector('button[onclick="newQuestion()"]');
   const mode = document.querySelector('input[name="mode"]:checked');
-  if (!noteButtonsDiv || !mode) return;
-  noteButtonsDiv.style.display = mode.value === "octave" ? "none" : "flex";
+  if (!mode) return;
+
+  // ✅ 「次の問題へ」ボタンだけ切り替える
   if (nextBtn) {
     nextBtn.style.display = mode.value === "learn" ? "none" : "inline-block";
   }
 }
-
 
 document.querySelectorAll('input[name="mode"]').forEach(r => {
   r.addEventListener('change', () => {
@@ -274,6 +414,13 @@ document.addEventListener("DOMContentLoaded", function () {
   updateNoteButtonsVisibility();
 });
 
+document.getElementById('inlaySelect').addEventListener('change', () => {
+  drawFretboard();
+});
+
+document.getElementById('fingerboardSelect').addEventListener('change', () => {
+  drawFretboard();
+});
 
 
 function drawDot(x, y, color, radius) {
@@ -296,13 +443,6 @@ function drawNoteCircle(string, fret, color = 'red', radius = 8) {
     : (fretX[fret - 1] + fretX[fret]) / 2;
   const y = stringCenters[string];
   drawDot(x, y, color, radius);
-}
-
-function drawDot(x, y, color, radius) {
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
 }
 
 function drawAnswerCircle(string, fret, color = 'lightgreen', radius = 6) {
@@ -339,7 +479,12 @@ function getOctaveEquivalentPositions(string, fret) {
   return result;
 }
 
+function resetActiveButton() {
+  document.querySelectorAll('.note-button').forEach(b => b.classList.remove('active'));
+}
+
 function newQuestion() {
+  resetActiveButton();
   const includeSharps = document.getElementById('includeSharps').checked;
   const allowedNotes = includeSharps ? NOTE_NAMES_ALL : NOTE_NAMES_WHITE;
 
@@ -413,22 +558,52 @@ function createButtons() {
   btns.innerHTML = '';
   const includeSharps = document.getElementById('includeSharps').checked;
   const notes = includeSharps ? NOTE_NAMES_ALL : NOTE_NAMES_WHITE;
+
   notes.forEach(note => {
     const btn = document.createElement('button');
     btn.textContent = note;
-    btn.onclick = () => {
+    btn.classList.add('note-button');
+
+    btn.addEventListener('click', () => {
+      // すべてのボタンから active クラスを外す
+      document.querySelectorAll('.note-button').forEach(b => b.classList.remove('active'));
+      // このボタンに active クラスを付与
+      btn.classList.add('active');
+
       const mode = document.querySelector('input[name="mode"]:checked')?.value;
       if (mode === 'learn') {
         highlightNote(note);
       } else {
         checkAnswer(note);
       }
-    };
+    });
+
     btns.appendChild(btn);
   });
 }
 
+const correctSound = new Audio('クイズ正解5.mp3');  
+const wrongSound = new Audio('クイズ不正解2.mp3');
+
+const synth = new Tone.Synth().toDestination();
+
+function playNoteTone(noteWithOctave) {
+  // 例: "E3", "C#4", "G2"
+  synth.triggerAttackRelease(noteWithOctave, "8n");  // 八分音で再生
+}
+
 function checkAnswer(ans) {
+  if (ans === question.note) {
+    correctSound.currentTime = 0;
+    correctSound.play();
+  } else {
+    wrongSound.currentTime = 0;
+    wrongSound.play();
+  }
+
+  const noteWithOctave = getNoteWithOctave(question.string, question.fret);
+  playNoteTone(noteWithOctave);
+
   const mode = document.querySelector('input[name="mode"]:checked').value;
   if (mode === 'learn') return;
 
@@ -449,6 +624,7 @@ function checkAnswer(ans) {
       }
     }
   }
+
   highlightSelectedNote(ans);
 }
 
@@ -467,6 +643,7 @@ document.getElementById('includeSharps').addEventListener('change', () => {
   createButtons();
   const mode = document.querySelector('input[name="mode"]:checked')?.value;
   if (mode === 'learn') {
+    highlightNote(null); // リセット
     drawFretboard();
   } else {
     newQuestion();
@@ -476,10 +653,19 @@ document.getElementById('includeSharps').addEventListener('change', () => {
 
 document.querySelectorAll('input[name="mode"]').forEach(r => {
   r.addEventListener('change', () => {
+    highlightNote(null);
     newQuestion();
+    resetActiveButton();
   });
 });
 
 createButtons();
 newQuestion();
 updateNoteButtonsVisibility();
+
+document.body.addEventListener('click', async () => {
+  if (Tone.context.state !== 'running') {
+    await Tone.start();
+    console.log("✅ Tone.js AudioContext started");
+  }
+}, { once: true });
