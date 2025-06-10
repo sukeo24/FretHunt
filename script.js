@@ -120,8 +120,8 @@ function drawPositionMarkers(style = 'dot') {
 
 // フレット線用のグラデーションを個別に定義
 const fretGradient = ctx.createLinearGradient(0, startY, 0, startY + stringSpacing * (stringCount - 1));
-fretGradient.addColorStop(0.02, '#fafdff');  // 上に少し影
-fretGradient.addColorStop(0.98, '#ccced0');
+fretGradient.addColorStop(0, '#fafdff');  // 上に少し影
+fretGradient.addColorStop(1, '#ccced0');
 
 
 // 補助関数（バード以外）
@@ -234,10 +234,10 @@ function drawFretboard() {
   const arcY = startY + arcRadius;
   const controlX = arcX + arcRadius * 0.3;
   ctx.beginPath();
-  ctx.moveTo(arcX, startY);
-  ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing);
-  ctx.lineTo(startX, startY + (stringCount - 1) * stringSpacing);
-  ctx.lineTo(startX, startY);
+  ctx.moveTo(arcX, startY - 10);
+  ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  ctx.lineTo(startX, startY + (stringCount - 1) * stringSpacing + 10);
+  ctx.lineTo(startX, startY - 10);
   ctx.closePath();
   ctx.fill();
 
@@ -279,10 +279,10 @@ function drawFretboard() {
   ctx.shadowOffsetY = 3;
   ctx.fillStyle = gradY;
   ctx.beginPath();
-  ctx.moveTo(arcX, startY);
-  ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing);
-  ctx.lineTo(arcX - 15, startY + (stringCount - 1) * stringSpacing);
-  ctx.lineTo(arcX - 15, startY);
+  ctx.moveTo(arcX, startY - 10);
+  ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  ctx.lineTo(arcX - 10, startY + (stringCount - 1) * stringSpacing + 10);
+  ctx.lineTo(arcX - 10, startY - 10);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
@@ -293,17 +293,17 @@ function drawFretboard() {
     ctx.save();
   
     ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(arcX, startY);
-    ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing);
-    ctx.lineTo(startX, startY + (stringCount - 1) * stringSpacing);
+    ctx.moveTo(startX, startY - 10);
+    ctx.lineTo(arcX, startY - 10);
+    ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+    ctx.lineTo(startX, startY + (stringCount - 1) * stringSpacing + 10);
     ctx.closePath();
   
     // このパスの内側だけ描画できるようにする
     ctx.clip();
   
     // 木目を描く（clip内に限定される）
-    drawRosewoodGrain(ctx, startX, startY, maxX - startX + 30, stringSpacing * (stringCount - 1));
+    drawRosewoodGrain(ctx, startX, startY - 30, maxX - startX + 30, stringSpacing * (stringCount - 1) + 60);
   
     ctx.restore(); // clip解除
   }
@@ -317,16 +317,16 @@ function drawFretboard() {
     if (i === fretX.length - 1) continue;
     ctx.beginPath();
     ctx.lineWidth = 3.3;
-    ctx.moveTo(fretX[i], startY);
-    ctx.lineTo(fretX[i], startY + (stringCount - 1) * stringSpacing);
+    ctx.moveTo(fretX[i], startY - 10.7);
+    ctx.lineTo(fretX[i], startY + (stringCount - 1) * stringSpacing + 10.7);
     ctx.strokeStyle = fretGradient;
     ctx.stroke();
   }
 
   // ナット線
   ctx.beginPath();
-  ctx.moveTo(fretX[0] - 2, startY);
-  ctx.lineTo(fretX[0] - 2, startY + (stringCount - 1) * stringSpacing);
+  ctx.moveTo(fretX[0] - 2, startY - 10.7);
+  ctx.lineTo(fretX[0] - 2, startY + (stringCount - 1) * stringSpacing + 10.7);
   ctx.lineWidth = 5;
   ctx.strokeStyle = '#fffaf0';
   ctx.stroke();
