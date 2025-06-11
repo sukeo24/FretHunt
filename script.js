@@ -67,21 +67,57 @@ function getFingerboardColors() {
   }
 }
 
-function drawRosewoodGrain(ctx, startX, startY, width, height) {
-  ctx.save();
-  ctx.strokeStyle = 'rgba(120, 50, 50, 0.2)'; // 赤系
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 100; i++) {
-    const y = startY + Math.random() * height;
-    const wobble = Math.sin(i * 0.3) * 5;
-    ctx.beginPath();
-    ctx.moveTo(startX, y);
-    ctx.lineTo(startX + width, y + wobble);
-    ctx.stroke();
-  }
-  ctx.restore();
+// グローバル変数
+let woodGrainImage = null;
+let currentGrainMaterial = null;
+let hasAnswered = false;
+
+
+function generateWoodGrainImage(material, arcX, controlX, arcY, maxX) {
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = canvas.width;
+  offCanvas.height = canvas.height;
+  const offCtx = offCanvas.getContext('2d');
+
+  offCtx.save();
+  offCtx.beginPath();
+  offCtx.moveTo(startX, startY - 10);
+  offCtx.lineTo(arcX, startY - 10);
+  offCtx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  offCtx.lineTo(startX, startY + (stringCount - 1) * stringSpacing + 10);
+  offCtx.closePath();
+  offCtx.clip();
+
+  drawWoodGrain(offCtx, startX, startY - 30, maxX - startX + 30, stringSpacing * (stringCount - 1) + 60, material);
+
+  offCtx.restore();
+
+  woodGrainImage = offCanvas;
+  currentGrainMaterial = material;
 }
 
+function drawWoodGrain(ctx, x, y, w, h, material) {
+  ctx.save();
+  ctx.strokeStyle = {
+    rosewood: 'rgba(120, 50, 50, 0.2)',
+    maple: 'rgba(180, 120, 50, 0.2)',
+    ebony: 'rgba(80, 80, 80, 0.2)',
+  }[material] || 'rgba(100, 100, 100, 0.2)';
+  ctx.lineWidth = 1;
+
+  const seed = Math.random() * 100000; // 乱数シードを固定したい場合はMath.seedrandomなど導入
+
+  for (let i = 0; i < 100; i++) {
+    const yy = y + Math.random() * h;
+    const wobble = Math.sin(i * 0.3) * 5;
+    ctx.beginPath();
+    ctx.moveTo(x, yy);
+    ctx.lineTo(x + w, yy + wobble);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
 
 function drawPositionMarkers(style = 'dot') {
   const inlayFrets = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -94,9 +130,12 @@ function drawPositionMarkers(style = 'dot') {
     ySet.forEach(offset => {
       const y = startY + offset * stringSpacing;
 
+      const material = document.getElementById('fingerboardSelect')?.value || 'rosewood';
+      const inlayColor = (material === 'maple' && style === 'dot') ? 'black' : 'white';
+
       switch (style) {
         case 'dot':
-          drawDot(x, y, 'white', 8);
+          drawDot(x, y, inlayColor, 8);
           break;
 
         case 'block':
@@ -146,7 +185,6 @@ function drawDiamond(x, y, size = 7) {
   ctx.fillStyle = gradient;
   ctx.fill();
 }
-
 
 function drawFretboard() {
   ctx.lineWidth = 1;
@@ -287,26 +325,14 @@ function drawFretboard() {
   ctx.fill();
   ctx.restore();
 
+  // 🎸 指板の木目を描画
+  const material = document.getElementById('fingerboardSelect')?.value || 'rosewood';
 
-  if (document.getElementById('fingerboardSelect')?.value === 'rosewood') {
-    // 指板の描画範囲を定義
-    ctx.save();
-  
-    ctx.beginPath();
-    ctx.moveTo(startX, startY - 10);
-    ctx.lineTo(arcX, startY - 10);
-    ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
-    ctx.lineTo(startX, startY + (stringCount - 1) * stringSpacing + 10);
-    ctx.closePath();
-  
-    // このパスの内側だけ描画できるようにする
-    ctx.clip();
-  
-    // 木目を描く（clip内に限定される）
-    drawRosewoodGrain(ctx, startX, startY - 30, maxX - startX + 30, stringSpacing * (stringCount - 1) + 60);
-  
-    ctx.restore(); // clip解除
+  if (woodGrainImage === null || currentGrainMaterial !== material) {
+    generateWoodGrainImage(material, arcX, controlX, arcY, maxX);
   }
+  
+  ctx.drawImage(woodGrainImage, 0, 0);
 
   // ポジションマーク描画
   const inlayStyle = document.getElementById('inlaySelect')?.value || 'dot';
@@ -419,9 +445,9 @@ document.getElementById('inlaySelect').addEventListener('change', () => {
 });
 
 document.getElementById('fingerboardSelect').addEventListener('change', () => {
+  rosewoodGrainDrawn = false;  // ✅ 別材質→ローズウッドに戻ったとき再描画を許可
   drawFretboard();
 });
-
 
 function drawDot(x, y, color, radius) {
   ctx.beginPath();
@@ -484,6 +510,7 @@ function resetActiveButton() {
 }
 
 function newQuestion() {
+  hasAnswered = false;
   resetActiveButton();
   const includeSharps = document.getElementById('includeSharps').checked;
   const allowedNotes = includeSharps ? NOTE_NAMES_ALL : NOTE_NAMES_WHITE;
@@ -565,19 +592,27 @@ function createButtons() {
     btn.classList.add('note-button');
 
     btn.addEventListener('click', () => {
+      const isActive = btn.classList.contains('active');
+      const mode = document.querySelector('input[name="mode"]:checked')?.value;
+    
       // すべてのボタンから active クラスを外す
       document.querySelectorAll('.note-button').forEach(b => b.classList.remove('active'));
-      // このボタンに active クラスを付与
-      btn.classList.add('active');
+    
+      // ✅ 回答済みのとき、クイズモードでは何もできない
+      if (mode !== 'learn' && hasAnswered) return;
 
-      const mode = document.querySelector('input[name="mode"]:checked')?.value;
-      if (mode === 'learn') {
-        highlightNote(note);
+      // ✅ もしすでに選択されていたら解除、それ以外なら選択
+      if (!isActive) {
+        btn.classList.add('active');
+        if (mode === 'learn') {
+          highlightNote(note);
+        } else {
+          checkAnswer(note);
+        }
       } else {
-        checkAnswer(note);
+        highlightNote(null); // 学習モードのとき選択解除で表示も消す
       }
-    });
-
+    });    
     btns.appendChild(btn);
   });
 }
@@ -593,6 +628,9 @@ function playNoteTone(noteWithOctave) {
 }
 
 function checkAnswer(ans) {
+  if (hasAnswered) return; // 二重クリック防止
+  hasAnswered = true;
+  
   if (ans === question.note) {
     correctSound.currentTime = 0;
     correctSound.play();
