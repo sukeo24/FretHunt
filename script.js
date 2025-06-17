@@ -120,12 +120,17 @@ function drawWoodGrain(ctx, x, y, w, h, material) {
 }
 
 function drawPositionMarkers(style = 'dot') {
-  const inlayFrets = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+  const inlayFrets = style === 'block'
+  ? [1, 3, 5, 7, 9, 12, 15, 17, 19, 21, 24]
+  : [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+
   const doubleFrets = [12, 24];
 
   inlayFrets.forEach(f => {
     const x = fretCenters[f];
-    const ySet = doubleFrets.includes(f) ? [1.5, 3.5] : [2.5];
+    const ySet = (
+      (style === 'dot' || style === 'diamond') && doubleFrets.includes(f)
+    ) ? [1.5, 3.5] : [2.5];    
 
     ySet.forEach(offset => {
       const y = startY + offset * stringSpacing;
@@ -138,13 +143,32 @@ function drawPositionMarkers(style = 'dot') {
           drawDot(x, y, inlayColor, 8);
           break;
 
-        case 'block':
-          drawBlock(x, y, 'white', 20, 100);
+        case 'block': {
+          // 細かく制御：低音側ほど太い、ハイフレットほど細く
+          const maxBlockWidth = 80;
+          const minBlockWidth = 5;
+        
+          // 0〜1の範囲でフレット位置からスケーリング
+          const scaleRatio = 1 - (f / fretCount);
+          const width = minBlockWidth + (maxBlockWidth - minBlockWidth) * scaleRatio;
+        
+          const height = stringSpacing * 2;
+        
+          drawBlock(x, y, 'white', width, height);
           break;
+        }
 
-        case 'dish':
-          drawDot(x, y, 'white', 9);
+        case 'dish': {
+          const maxBlockWidth = 60;
+          const minBlockWidth = 10;
+          const scaleRatio = 1 - (f / fretCount);
+          const width = minBlockWidth + (maxBlockWidth - minBlockWidth) * scaleRatio;
+        
+          const height = stringSpacing * 2.2; // blockより縦長
+          drawCurvedBlock(x, y, width, height, 'white');
           break;
+        }
+        
 
         case 'diamond':
           drawDiamond(x, y);
@@ -165,9 +189,25 @@ fretGradient.addColorStop(1, '#ccced0');
 
 // 補助関数（バード以外）
 function drawBlock(x, y, color, width, height) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x - width / 2, y - height / 2, width, height);
+  const leftX = x - width / 2;
+  const topY = y - height / 2;
+  const rightX = x + width / 2;
+  const bottomY = y + height / 2;
+
+  // グラデーション（白蝶貝風）
+  const grad = ctx.createLinearGradient(leftX, topY, rightX, bottomY);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.3, '#f0f0f0');
+  grad.addColorStop(0.5, '#e0f8ff');
+  grad.addColorStop(0.7, '#f0f0f0');
+  grad.addColorStop(1, '#ffffff');
+
+  ctx.save();
+  ctx.fillStyle = grad;
+  ctx.fillRect(leftX, topY, width, height);
+  ctx.restore();
 }
+
 
 function drawDiamond(x, y, size = 7) {
 
@@ -185,6 +225,46 @@ function drawDiamond(x, y, size = 7) {
   ctx.fillStyle = gradient;
   ctx.fill();
 }
+
+function drawCurvedBlock(x, y, width, height, color = 'white') {
+  ctx.save();
+
+  const leftX = x - width / 2;
+  const rightX = x + width / 2;
+  const topY = y - height / 2;
+  const bottomY = y + height / 2; // 少し下げて湾曲を強調
+  
+  const grad = ctx.createLinearGradient(leftX, topY, rightX, bottomY);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.3, '#f0f0f0');
+  grad.addColorStop(0.5, '#e0f8ff'); // 青系ハイライト
+  grad.addColorStop(0.7, '#f0f0f0');
+  grad.addColorStop(1, '#ffffff');
+  ctx.fillStyle = grad;
+  
+  ctx.beginPath();
+
+  const curveDepth = height * 0.15; // 上下の内側の湾曲度
+
+  // 左上
+  ctx.moveTo(leftX, topY);
+
+  // 上辺：内側に湾曲
+  ctx.quadraticCurveTo(rightX - 10, topY + curveDepth, rightX, topY + 15);
+
+  // 右辺（短い直線）
+  ctx.lineTo(rightX, bottomY - 15);
+
+  // 下辺：内側に湾曲
+  ctx.quadraticCurveTo(rightX - 10, bottomY - curveDepth, leftX, bottomY);
+
+  // 左辺（直線）
+  ctx.closePath();
+
+  ctx.fill();
+  ctx.restore();
+}
+
 
 function drawFretboard() {
   ctx.lineWidth = 1;
@@ -620,7 +700,18 @@ function createButtons() {
 const correctSound = new Audio('クイズ正解5.mp3');  
 const wrongSound = new Audio('クイズ不正解2.mp3');
 
-const synth = new Tone.Synth().toDestination();
+const reverb = new Tone.Reverb({
+  decay: 1,
+  preDelay: 0.01
+}).toDestination();
+
+const chorus = new Tone.Chorus(1, 1, 5).start();
+
+const synth = new Tone.PluckSynth({
+  attackNoise: 1,  // ノイズのアタック時間
+  dampening: 3000,       // 音の減衰をゆるめる（小さいほど余韻長く）
+  resonance: 1         // 余韻の強さ（1に近いほど深く鳴る）
+}).chain(chorus, reverb);
 
 function playNoteTone(noteWithOctave) {
   // 例: "E3", "C#4", "G2"
