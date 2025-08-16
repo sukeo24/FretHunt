@@ -67,6 +67,11 @@ function getFingerboardColors() {
   }
 }
 
+function getCurrentModel() {
+  return document.getElementById('modelSelect')?.value || 'default';
+}
+
+
 // グローバル変数
 let woodGrainImage = null;
 let currentGrainMaterial = null;
@@ -82,10 +87,16 @@ function generateWoodGrainImage(material, arcX, controlX, arcY, maxX) {
   offCtx.save();
   offCtx.beginPath();
   offCtx.moveTo(startX, startY - 10);
-  offCtx.lineTo(arcX, startY - 10);
-  offCtx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  if (getCurrentModel() === 'gibson') {
+    offCtx.lineTo(arcX, startY - 10);
+    offCtx.lineTo(arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  } else {
+    offCtx.lineTo(arcX, startY - 10);
+    offCtx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  }
   offCtx.lineTo(startX, startY + (stringCount - 1) * stringSpacing + 10);
   offCtx.closePath();
+  
   offCtx.clip();
 
   drawWoodGrain(offCtx, startX, startY - 30, maxX - startX + 30, stringSpacing * (stringCount - 1) + 60, material);
@@ -181,6 +192,23 @@ function drawPositionMarkers(style = 'dot') {
   });
 }
 
+// フレット番号を描画
+function drawFretNumberBelow(x, number) {
+  const y = startY + stringSpacing * (stringCount - 1) + 23;  // 弦より少し下
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.beginPath();
+  ctx.arc(x, y + 6.5, 13, 0, 2 * Math.PI);
+  ctx.fillStyle = 'orange';
+  ctx.fill();
+  ctx.fillStyle = 'white';
+  ctx.strokeStyle = 'black';
+  ctx.lineWidth = 1;
+  ctx.strokeText(number, x, y); // 黒縁
+  ctx.fillText(number, x, y);   // 白文字
+}
+
 // フレット線用のグラデーションを個別に定義
 const fretGradient = ctx.createLinearGradient(0, startY, 0, startY + stringSpacing * (stringCount - 1));
 fretGradient.addColorStop(0, '#fafdff');  // 上に少し影
@@ -204,10 +232,10 @@ function drawBlock(x, y, color, width, height) {
 
   ctx.save();
   ctx.fillStyle = grad;
+  ctx.globalAlpha = 0.95
   ctx.fillRect(leftX, topY, width, height);
   ctx.restore();
 }
-
 
 function drawDiamond(x, y, size = 7) {
 
@@ -260,8 +288,101 @@ function drawCurvedBlock(x, y, width, height, color = 'white') {
 
   // 左辺（直線）
   ctx.closePath();
-
+  ctx.globalAlpha = 0.95
   ctx.fill();
+  ctx.restore();
+}
+
+function drawSingleCoilPickup(x, y, width, height) {
+  ctx.save();
+
+  // 外枠（縦長オーバル風）
+  ctx.beginPath();
+  ctx.moveTo(x, y + 10);
+  ctx.quadraticCurveTo(x + width / 2, y - 10, x + width, y + 10);
+  ctx.lineTo(x + width, y + height - 10);
+  ctx.quadraticCurveTo(x + width / 2, y + height + 10, x, y + height - 10);
+  ctx.closePath();
+
+  ctx.fillStyle = 'white';
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 10;
+  ctx.shadowOffsetY = 8;
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+
+  ctx.strokeStyle = '#999';
+  ctx.lineWidth = 0.05;
+  ctx.stroke();
+
+  // ポールピース（6つの小さな黒丸）
+  const dotRadius = 5;
+  const dotSpacing = height / 6;
+  for (let i = 0; i < 6; i++) {
+    const cy = y + dotSpacing * i + dotSpacing / 2;
+    ctx.beginPath();
+    ctx.arc(x + width / 2, cy, dotRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawHumbucker(x, y, width, height) {
+  ctx.save();
+
+  // グラデーション（メタリック調）
+  const grad = ctx.createLinearGradient(x, y, x + width, y + height);
+  grad.addColorStop(0, '#f5f5f5');
+  grad.addColorStop(0.4, '#c0c0c0');
+  grad.addColorStop(0.5, '#a0a0a0');
+  grad.addColorStop(0.6, '#d0d0d0');
+  grad.addColorStop(1, '#f5f5f5');
+
+  // 角丸の四角形（カスタム描画）
+  const radius = 6;
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, radius);
+  ctx.fillStyle = grad;
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 10;
+  ctx.shadowOffsetY = 8;
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+
+  ctx.strokeStyle = '#999';
+  ctx.lineWidth = 0.1;
+  ctx.stroke();
+
+  // ポールピース（左列のみ）
+  const poleRadius = 7.5;
+  const poleSpacing = height / 6;
+  const poleX = x + width / 4; // 左側に配置
+
+  for (let i = 0; i < 6; i++) {
+    const cy = y + poleSpacing * i + poleSpacing / 2;
+  
+    // 金色メタリックなラジアルグラデーション
+    const grad = ctx.createRadialGradient(poleX, cy, 0, poleX, cy, poleRadius);
+    grad.addColorStop(0, '#fff4c2');   // 明るい中心
+    grad.addColorStop(0.4, '#f0c45c'); // 黄金色
+    grad.addColorStop(1, '#b38728');   // 外周：深い金
+  
+    ctx.beginPath();
+    ctx.arc(poleX, cy, poleRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = grad;
+    // ポールピースの影
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -335,7 +456,7 @@ function drawFretboard() {
   ctx.lineTo(canvas.width, canvas.height);
   ctx.lineTo(fretX[24], canvas.height);
   ctx.closePath();
-  ctx.fillStyle = '#fffaf0';
+  ctx.fillStyle = '#FFF9EE';
   ctx.fill();
 
   // 一旦描画
@@ -353,42 +474,38 @@ function drawFretboard() {
   const controlX = arcX + arcRadius * 0.3;
   ctx.beginPath();
   ctx.moveTo(arcX, startY - 10);
-  ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  
+  if (getCurrentModel() === 'gibson') {
+    // レスポール：右端がまっすぐ
+    ctx.lineTo(arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  } else {
+    // ストラト等：アーチ状のカーブ
+    ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+  }
+  
   ctx.lineTo(startX, startY + (stringCount - 1) * stringSpacing + 10);
   ctx.lineTo(startX, startY - 10);
   ctx.closePath();
   ctx.fill();
 
   // 🎸 ピックアップ描画（縦直線・横曲線 + 影）
-  const pickupHeight = 280;
-  const pickupWidth = 50;
-  const pickupX = maxX + 80;
-  const pickupY = arcY - pickupHeight / 2;
-
-  ctx.beginPath();
-  ctx.moveTo(pickupX, pickupY + 25);
-  ctx.quadraticCurveTo(pickupX + pickupWidth / 2, pickupY, pickupX + pickupWidth, pickupY + 25);
-  ctx.lineTo(pickupX + pickupWidth, pickupY + pickupHeight - 25);
-  ctx.quadraticCurveTo(pickupX + pickupWidth / 2, pickupY + pickupHeight, pickupX, pickupY + pickupHeight - 25);
-  ctx.closePath();
-  ctx.fillStyle = 'white';
-  ctx.shadowColor = 'rgba(0,0,0,0.25)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetX = 10;
-  ctx.shadowOffsetY = 8;
-  ctx.fill();
-  ctx.shadowColor = 'transparent';
-
-  const dotRadius = 5;
-  const dotSpacing = pickupHeight / 6;
-  for (let i = 0; i < 6; i++) {
-    const cy = pickupY + dotSpacing * i + dotSpacing / 2;
-    ctx.beginPath();
-    ctx.arc(pickupX + pickupWidth / 2, cy, dotRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = '#4a4a4a';
-    ctx.fill();
+  if (getCurrentModel() === 'default') {
+    const pickupHeight = 280;
+    const pickupWidth = 50;
+    const pickupX = maxX + 80;
+    const pickupY = arcY - pickupHeight / 2;
+  
+    drawSingleCoilPickup(pickupX, pickupY, pickupWidth, pickupHeight);
   }
-
+  else if (getCurrentModel() === 'gibson') {
+    const pickupHeight = 280;
+    const pickupWidth = 130;
+    const pickupX = maxX + 20; // 少し左寄りに調整（幅があるため）
+    const pickupY = arcY - pickupHeight / 2;
+  
+    drawHumbucker(pickupX, pickupY, pickupWidth, pickupHeight);
+  }
+  
   // 🎸 指板とピックガードの境に影を描画（←移動済み）
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.25)';
@@ -396,20 +513,58 @@ function drawFretboard() {
   ctx.shadowOffsetX = 12;
   ctx.shadowOffsetY = 3;
   ctx.fillStyle = gradY;
+  
   ctx.beginPath();
   ctx.moveTo(arcX, startY - 10);
-  ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
-  ctx.lineTo(arcX - 10, startY + (stringCount - 1) * stringSpacing + 10);
-  ctx.lineTo(arcX - 10, startY - 10);
+  
+  if (getCurrentModel() === 'gibson') {
+    // まっすぐ
+    ctx.lineTo(arcX, startY + (stringCount - 1) * stringSpacing + 10);
+    ctx.lineTo(arcX - 10, startY + (stringCount - 1) * stringSpacing + 10);
+    ctx.lineTo(arcX - 10, startY - 10);
+  } else {
+    // カーブ
+    ctx.quadraticCurveTo(controlX, arcY, arcX, startY + (stringCount - 1) * stringSpacing + 10);
+    ctx.lineTo(arcX - 10, startY + (stringCount - 1) * stringSpacing + 10);
+    ctx.lineTo(arcX - 10, startY - 10);
+  }
+  
   ctx.closePath();
   ctx.fill();
   ctx.restore();
+  
+  // 🎸 レスポールのバインディング
+  if (getCurrentModel() === 'gibson') {
+    ctx.save();
+    ctx.strokeStyle = '#fef5e5'; // クリームっぽい
+    ctx.lineWidth = 2;
+  
+    // 上側（1弦〜6弦の外側）
+    ctx.beginPath();
+    ctx.moveTo(startX, startY - stringSpacing / 2 + 14);
+    ctx.lineTo(maxX, startY - stringSpacing / 2 + 14);
+    ctx.stroke();
+  
+    // 下側
+    ctx.beginPath();
+    ctx.moveTo(startX, startY + (stringCount - 1) * stringSpacing + stringSpacing / 2 - 14);
+    ctx.lineTo(maxX, startY + (stringCount - 1) * stringSpacing + stringSpacing / 2 - 14);
+    ctx.stroke();
+
+    // 右側（指板終わり）
+    ctx.beginPath();
+    ctx.moveTo(maxX, startY - stringSpacing / 2 + 13);
+    ctx.lineTo(maxX, startY + (stringCount - 1) * stringSpacing + stringSpacing / 2 - 13);
+    ctx.stroke();
+  
+    ctx.restore();
+  }  
 
   // 🎸 指板の木目を描画
   const material = document.getElementById('fingerboardSelect')?.value || 'rosewood';
 
   if (woodGrainImage === null || currentGrainMaterial !== material) {
-    generateWoodGrainImage(material, arcX, controlX, arcY, maxX);
+    generateWoodGrainImage(material, arcX - 1.5, controlX, arcY, maxX);
   }
   
   ctx.drawImage(woodGrainImage, 0, 0);
@@ -417,6 +572,16 @@ function drawFretboard() {
   // ポジションマーク描画
   const inlayStyle = document.getElementById('inlaySelect')?.value || 'dot';
   drawPositionMarkers(inlayStyle);
+// 🎯 ポジションマークの下にフレット番号を表示
+const inlayFrets = inlayStyle === 'block'
+  ? [1, 3, 5, 7, 9, 12, 15, 17, 19, 21, 24]
+  : [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+
+inlayFrets.forEach(f => {
+  if (fretCenters[f]) {
+    drawFretNumberBelow(fretCenters[f], f);
+  }
+});
 
   // フレット線描画
   for (let i = 0; i < fretX.length; i++) {
@@ -447,7 +612,7 @@ function drawFretboard() {
     ctx.strokeStyle = '#c0c0c0';
     ctx.stroke();
     ctx.fillStyle = 'white';
-    ctx.fillText(`${i + 1}弦`, startX - 50, y);
+    ctx.fillText(`${i + 1}弦`, startX - 45, y - 6.7);
   }
 
   // 音名表示（学習モード）
@@ -518,6 +683,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   drawFretboard();
   updateNoteButtonsVisibility();
+});
+
+document.getElementById('modelSelect').addEventListener('change', () => {
+  woodGrainImage = null;  
+  drawFretboard();
 });
 
 document.getElementById('inlaySelect').addEventListener('change', () => {
