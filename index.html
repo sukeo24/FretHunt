@@ -6,53 +6,127 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
+  <button id="menuToggle" class="menu-toggle">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
 
-    <div id="settings">
-
-      <label for="fingerboardSelect">指板材質:</label>
-      <select id="fingerboardSelect">
-        <option value="rosewood" selected>ローズウッド</option>
-        <option value="maple">メープル</option>
-        <option value="ebony">エボニー</option>
-      </select>
-
-
-      <label for="inlaySelect">インレイ：</label>
-      <select id="inlaySelect">
-        <option value="dot">ドット</option>
-        <option value="dish">ディッシュ</option>        
-        <option value="block">ブロック</option>
-        <option value="diamond">ダイヤモンド</option>
-      </select>
-    </div>
+  <div class="app-layout">
     
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <img src="FretHunt_logo.png" alt="FretHunt" class="sidebar-logo" />
+      </div>
 
-    <img src="FretHunt_logo.png" alt="FretHunt ロゴ" class="logo" />
-  </header>
+      <div class="sidebar-section">
+        <h3> 🔥 Play Mode</h3>
+        <div class="radio-group vertical">
+          <label class="mode-item">
+            <input type="radio" name="mode" value="learn" checked onchange="updateNoteButtonsVisibility(); newQuestion(); drawFretboard();">
+            <span class="label-text">フリーモード</span>
+          </label>
+          <label class="mode-item">
+            <input type="radio" name="mode" value="note" onchange="updateNoteButtonsVisibility(); newQuestion(); drawFretboard();">
+            <span class="label-text">音名クイズ</span>
+          </label>
+          <label class="mode-item">
+            <input type="radio" name="mode" value="octave" onchange="updateNoteButtonsVisibility(); newQuestion(); drawFretboard();">
+            <span class="label-text">オクターブ</span>
+          </label>
+          <label class="mode-item">
+            <input type="radio" name="mode" value="fifth" onchange="updateNoteButtonsVisibility(); newQuestion(); drawFretboard();">
+            <span class="label-text">5th (パワーコード)</span>
+          </label>
+        </div>
+      </div>
 
-  
-  <div class="controls">
-    <label><input type="radio" name="mode" value="learn" checked/> 学習モード</label>
-    <label><input type="radio" name="mode" value="note"  /> 音名モード</label>
-    <label><input type="radio" name="mode" value="octave" /> オクターブモード</label>
-    <label><input type="radio" name="mode" value="fifth" /> 5thモード</label>
-    <label><input type="checkbox" id="includeSharps"  /> ♯(黒鍵)を含める</label>
-  </div>
+      <hr class="sidebar-divider">
 
+      <div class="sidebar-section">
+        <h3> 👀 Display</h3>
+        <div class="control-row">
+          <div class="control-row" style="margin-bottom: 15px;">
+            <label style="display:block; margin-bottom:5px; color:#94a3b8; font-size:13px;">Key (Root):</label>
+            <select id="keySelect" class="full-width">
+              <option value="0" selected>C</option>
+              <option value="1">C# / D♭</option>
+              <option value="2">D</option>
+              <option value="3">D# / E♭</option>
+              <option value="4">E</option>
+              <option value="5">F</option>
+              <option value="6">F# / G♭</option>
+              <option value="7">G</option>
+              <option value="8">G# / A♭</option>
+              <option value="9">A</option>
+              <option value="10">A# / B♭</option>
+              <option value="11">B</option>
+            </select>
+          </div>
+          <label>表示形式:</label>
+          <div class="toggle-group">
+             <label><input type="radio" name="labelMode" value="note" checked onchange="drawFretboard()"> 音名</label>
+             <label><input type="radio" name="labelMode" value="interval" onchange="drawFretboard()"> 度数</label>
+             <label><input type="radio" name="labelMode" value="solfege" onchange="drawFretboard()"> 階名</label>
+          </div>
+        </div>
+        <div class="control-row mt-10">
+          <label class="checkbox-label">
+            <input type="checkbox" id="nonDiatonic" checked onchange="createButtons(); drawFretboard();">
+            <span>スケール外の音を表示する</span>
+          </label>
+        </div>
+      </div>
 
-  <canvas id="fretboard" width="1600" height="300" style="position:relative; z-index:1;"></canvas>
+      <hr class="sidebar-divider">
 
+      <div class="sidebar-section">
+        <h3> 🎸 Gear Settings</h3>
+        <div class="control-group">
+          <label>Model</label>
+          <select id="modelSelect" class="full-width">
+            <option value="default">ストラトキャスター</option>
+            <option value="gibson">レスポール</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Wood</label>
+          <select id="fingerboardSelect" class="full-width">
+            <option value="rosewood" selected>ローズウッド</option>
+            <option value="maple">メープル</option>
+            <option value="ebony">エボニー</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Inlay</label>
+          <select id="inlaySelect" class="full-width">
+            <option value="dot">ドット</option>
+            <option value="dish">ディッシュ</option>        
+            <option value="block">ブロック</option>
+            <option value="diamond">ダイヤモンド</option>
+          </select>
+        </div>
+      </div>
+    </aside>
 
-  <!-- 音名ボタン -->
-  <div id="buttons" class="note-buttons"></div> 
+    <div class="overlay" id="overlay"></div>
 
-  <script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
+    <main class="main-content">
+      <div class="canvas-container">
+        <canvas id="fretboard" width="1600" height="330"></canvas>
+      </div>
 
-  <p id="question">問題: </p>
-  <p id="result"></p>
-  <button onclick="newQuestion()">次の問題へ</button>
+      <div class="game-area">
+        <p id="question">問題: </p>
+        <p id="result"></p>
+        
+        <div id="buttons" class="note-buttons"></div>
+        
+        <button onclick="newQuestion()" id="nextBtn" style="display:none;">次の問題へ</button>
+      </div>
+    </main>
 
+  </div> <script src="https://unpkg.com/tone@latest/build/Tone.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
