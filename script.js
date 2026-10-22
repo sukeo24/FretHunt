@@ -11,9 +11,33 @@ canvas.style.width = cssWidth + 'px';
 canvas.style.height = cssHeight + 'px';
 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+
+// 音名表示（英語）
 const NOTE_NAMES_ALL = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const NOTE_NAMES_WHITE = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const OPEN_NOTES = ['E', 'B', 'G', 'D', 'A', 'E'];
+
+// キー設定
+let currentKeyIndex = 0; // 0 = C
+
+// メジャースケールのインターバル（半音）
+const MAJOR_SCALE_INTERVALS = [0, 2, 4, 5, 7, 9, 11]; // R, M2, M3, P4, P5, M6, M7
+
+// 度数表記（英語）
+const INTERVAL_NAMES = [
+  'R', '♭9', '9', '♭3', '3', '11', '♭5', 'P5', '♭13', '13', '7', 'M7'
+]
+
+// 階名表示（イタリア語）
+const SOLFEGE_NAMES = [
+  'ド', 'デ', 'レ', 'リ', 'ミ', 'ファ', 'フィ', 'ソ', 'サ', 'ラ', 'チ', 'シ'
+]
+
+// 表示モード
+let labelMode = 'note'; // 'note', 'interval', 'solfege'
+
+
+// フレットボードの基本設定
 const fretCount = 25;
 const questionFretLimit = 13;
 const stringCount = 6;
@@ -615,14 +639,22 @@ inlayFrets.forEach(f => {
     ctx.fillText(`${i + 1}弦`, startX - 45, y - 6.7);
   }
 
-  // 音名表示（学習モード）
+  // ラベル表示（学習モード）
   const mode = document.querySelector('input[name="mode"]:checked')?.value;
   if (mode === 'learn') {
-    const includeSharps = document.getElementById('includeSharps').checked;
+    const nonDiatonic = document.getElementById('nonDiatonic').checked;
     for (let s = 0; s < stringCount; s++) {
       for (let f = 0; f < fretCount; f++) {
         const note = getNote(s, f);
-        if (!includeSharps && !NOTE_NAMES_WHITE.includes(note)) continue;
+        const noteIndex = NOTE_NAMES_ALL.indexOf(note);
+        // 現在のキーからの距離（度数）を計算
+        const interval = (noteIndex - currentKeyIndex + 12) % 12;
+
+        // その度数がメジャースケールに含まれるか？
+        const isDiatonic = MAJOR_SCALE_INTERVALS.includes(interval);
+
+        // 「スケール外を含める」がOFFで、かつダイアトニックじゃないなら表示しない
+        if (!nonDiatonic && !isDiatonic) continue;
 
         const x = f === 0 ? fretX[0] : (fretX[f - 1] + fretX[f]) / 2;
         const y = stringCenters[s];
@@ -632,17 +664,22 @@ inlayFrets.forEach(f => {
         ctx.fillStyle = note === highlightedNote ? 'lightgreen' : 'rgba(0, 0, 0, 0.4)';
         ctx.fill();
 
+        const displayText = getLabel(noteIndex);
+
         ctx.font = 'bold 15px sans-serif';
+        if(displayText.length > 3) ctx.font = 'bold 13px sans-serif';
+
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 3;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.strokeText(note, x, y);
+        ctx.strokeText(displayText, x, y);
         ctx.fillStyle = 'white';
-        ctx.fillText(note, x, y);
+        ctx.fillText(displayText, x, y);
       }
     }
   }
+
   if (
     question?.string !== undefined &&
     question?.fret !== undefined &&
@@ -706,12 +743,33 @@ function drawDot(x, y, color, radius) {
   ctx.fill();
 }
 
+// 音名取得
 function getNote(string, fret) {
   const openNote = OPEN_NOTES[string];
   const idx = (NOTE_NAMES_ALL.indexOf(openNote) + fret) % 12;
   return NOTE_NAMES_ALL[idx];
 }
 
+// 指定された音のインデックス(0~11)に対し、現在のモードに応じたラベルを返す
+function getLabel(noteIndex) {
+  // キー（C=0)からの距離を計算(0~11)
+  const distance = (noteIndex - currentKeyIndex + 12) % 12;
+
+  const mode = document.querySelector('input[name="labelMode"]:checked')?.value || 'note';
+
+  switch (mode) {
+    case 'interval':
+      return INTERVAL_NAMES[distance];
+    case 'solfege':
+      return SOLFEGE_NAMES[distance];
+    case 'note':
+    default:
+      return NOTE_NAMES_ALL[noteIndex];
+  }
+}
+
+
+// 赤丸を描画
 function drawNoteCircle(string, fret, color = 'red', radius = 8) {
   if (fret >= fretX.length - 1 || string >= stringCenters.length) return;
   const x = fret === 0
@@ -721,6 +779,7 @@ function drawNoteCircle(string, fret, color = 'red', radius = 8) {
   drawDot(x, y, color, radius);
 }
 
+// 正解の音名入り緑丸を描画
 function drawAnswerCircle(string, fret, color = 'lightgreen', radius = 6) {
   if (fret >= fretX.length - 1 || string >= stringCenters.length) return;
   const x = fret === 0 ? fretX[0] : (fretX[fret - 1] + fretX[fret]) / 2;
@@ -762,9 +821,20 @@ function resetActiveButton() {
 function newQuestion() {
   hasAnswered = false;
   resetActiveButton();
-  const includeSharps = document.getElementById('includeSharps').checked;
-  const allowedNotes = includeSharps ? NOTE_NAMES_ALL : NOTE_NAMES_WHITE;
-
+  const nonDiatonic = document.getElementById('nonDiatonic').checked;
+  // 出題してもいい音のリストを作る
+  let allowedNotes = [];
+    
+  if (nonDiatonic) {
+    // 全音OKならそのまま
+    allowedNotes = NOTE_NAMES_ALL;
+  } else {
+    // スケール内の音だけを抽出
+    allowedNotes = NOTE_NAMES_ALL.filter((note, index) => {
+      const interval = (index - currentKeyIndex + 12) % 12;
+      return MAJOR_SCALE_INTERVALS.includes(interval);
+    });
+  }
   const mode = document.querySelector('input[name="mode"]:checked').value;
   if (mode === 'learn') {
     drawFretboard();
@@ -833,8 +903,8 @@ canvas.addEventListener('click', function (e) {
 function createButtons() {
   const btns = document.getElementById('buttons');
   btns.innerHTML = '';
-  const includeSharps = document.getElementById('includeSharps').checked;
-  const notes = includeSharps ? NOTE_NAMES_ALL : NOTE_NAMES_WHITE;
+  const nonDiatonic = document.getElementById('nonDiatonic').checked;
+  const notes = nonDiatonic ? NOTE_NAMES_ALL : NOTE_NAMES_WHITE;
 
   notes.forEach(note => {
     const btn = document.createElement('button');
@@ -938,7 +1008,7 @@ function highlightAllSameNotes(note) {
   }
 }
 
-document.getElementById('includeSharps').addEventListener('change', () => {
+document.getElementById('nonDiatonic').addEventListener('change', () => {
   createButtons();
   const mode = document.querySelector('input[name="mode"]:checked')?.value;
   if (mode === 'learn') {
@@ -968,3 +1038,52 @@ document.body.addEventListener('click', async () => {
     console.log("✅ Tone.js AudioContext started");
   }
 }, { once: true });
+
+// script.js の末尾に追加
+
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+
+// 開閉機能をひとまとめに
+function toggleMenu() {
+  const isOpen = sidebar.classList.contains('is-open');
+  
+  if (isOpen) {
+    // 閉じる
+    sidebar.classList.remove('is-open');
+    overlay.classList.remove('is-open');
+    menuToggle.classList.remove('active');
+  } else {
+    // 開く
+    sidebar.classList.add('is-open');
+    overlay.classList.add('is-open');
+    menuToggle.classList.add('active');
+  }
+}
+
+// ボタンクリックで切り替え
+menuToggle.addEventListener('click', toggleMenu);
+
+// 背景（オーバーレイ）をクリックしても閉じる（これ重要！UX爆上がり）
+overlay.addEventListener('click', () => {
+  if (sidebar.classList.contains('is-open')) {
+    toggleMenu();
+  }
+});
+
+// ESCキーでも閉じれるようにする（PCユーザーへの配慮）
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
+    toggleMenu();
+  }
+});
+
+document.getElementById('keySelect').addEventListener('change', (e) => {
+  // 選択された値を数値に変換してセット
+  currentKeyIndex = parseInt(e.target.value, 10);
+  
+  // 画面を再描画（これで度数表示が一瞬で切り替わる！）
+  drawFretboard();
+});
+
