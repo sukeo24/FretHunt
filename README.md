@@ -1,5 +1,7 @@
 # FretHunt
 
+https://sukeo24.github.io/FretHunt/
+
 **ギターの指板を、もっと直感的に理解する。**
 
 FretHuntは、ギターの指板上にある音名や音程の位置関係を、視覚的・直感的に学習するために開発したWebアプリです。
