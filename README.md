@@ -6,6 +6,10 @@ FretHuntは、ギターの指板上にある音名や音程の位置関係を、
 
 HTML・CSS・JavaScriptを使用して個人開発しました。
 
+<img width="1470" height="835" alt="image" src="https://github.com/user-attachments/assets/c09b24f9-9f2b-4c6b-a70b-86136fd258f3" />
+<img width="1470" height="833" alt="image" src="https://github.com/user-attachments/assets/549f0e45-c47e-4345-a4c6-dafd63dd4489" />
+
+
 ## 開発背景
 
 ギターを始めた頃、指板上の音名を効率よく覚えたいと考えていました。
